@@ -1,41 +1,75 @@
-const MongoClient = require('mongodb').MongoClient;
 const { ObjectId } = require("mongodb");
 
 const bd = require("../bancoDados.js");
 
-var StatusPedido = {
-    EM_SEPARACAO: 0,
-    DEVOLVIDO: 1,
-    ENTREGUE: 2
+var TodosStatusPedido = {
+    EM_SEPARACAO: 'EM_SEPARACAO',
+    DEVOLVIDO: 'DEVOLVIDO',
+    ENTREGUE: 'ENTREGUE'
 };
 
-var FormaPagamento = {
-    DINHEIRO: 0,
-    CARTAO: 1,
-    BOLETO: 2
-}
+var TodasFormasPagamento = {
+    DINHEIRO: 'DINHEIRO',
+    CARTAO: 'CARTAO',
+    BOLETO: 'BOLETO'
+};
 
 class Pedido {
 
-    constructor(FormaPagamento, endereco, dataPedido, StatusPedido, idCliente) {
-        this.formaPagamento = FormaPagamento;
+    static encontrarStatus(status) {
+        switch (status) {
+            case 0: {
+                return TodosStatusPedido.EM_SEPARACAO;
+            }
+            case 1: {
+                return TodosStatusPedido.DEVOLVIDO;
+            }
+            case 2: {
+                return TodosStatusPedido.ENTREGUE;
+            }
+            default: {
+                return -1;
+            }
+        };
+    };
+
+    static encontrarPagamento(pagamento) {
+        switch (pagamento) {
+            case 0:
+                return TodasFormasPagamento.DINHEIRO
+            case 1:
+                return TodasFormasPagamento.CARTAO;
+            case 2:
+                return TodasFormasPagamento.BOLETO;
+            default:
+                return -1;
+        };
+    };
+
+    constructor(formaPagamento, endereco, dataPedido, statusPedido, idCliente) {
+        this.formaPagamento = Pedido.encontrarPagamento(formaPagamento);
+        this.statusPedido = Pedido.encontrarStatus(statusPedido);
         this.endereco = endereco;
         this.dataPedido = dataPedido;
-        this.StatusPedido = StatusPedido;
         this.idCliente = idCliente;
     };
 
     static async novoPedido(req, res) {
         try {
-            let novoPedido = new Pedido(req.body.formaPagamento, req.body.endereco, req.body.dataPedido, req.body.StatusPedido, req.body.idCliente);
             const collectionPedidos = await bd.conectarBancoDados('pedidos');
+
+            const dataPedido = new Date();
+        
+            let novoPedido = new Pedido(req.body.formaPagamento, req.body.endereco, dataPedido, req.body.statusPedido, req.body.idCliente);
+
+            if(novoPedido.statusPedido === -1 || novoPedido.formaPagamento === -1) return res.status(400).json('Status do pedido ou do pagamento inválido.');
 
             await collectionPedidos.insertOne(novoPedido);
 
-            res.status(200).json(novoPedido);
+            return res.status(200).json(novoPedido); 
         } catch (err) {
             console.log(err);
-            res.status(400).json('Erro ao cadastrar o pedido');
+            return res.status(400).json('Erro ao cadastrar o pedido');
         };
     };
 
@@ -44,6 +78,9 @@ class Pedido {
             const collectionPedidos = await bd.conectarBancoDados('pedidos');
             const pedido = await collectionPedidos.findOne({ "_id": ObjectId(req.params.id) });
             
+            if(!pedido)
+                return res.status(404).json('Pedido não encontrado.');
+
             res.status(200).json(pedido);
         } catch (err) {
             console.log(err);
@@ -54,16 +91,22 @@ class Pedido {
     static async excluirPedido(req, res) {
         try {
             const collectionPedidos = await bd.conectarBancoDados('pedidos');
-            const pedido = await collectionPedidos.findOne({ "_id": ObjectId(req.params.id) });
+            const pedido = await collectionPedidos.findOne({ _id: ObjectId(req.params.id) });
 
-            if (pedido.StatusPedido !== 'ENTREGUE')
-                return res.status(400).json('Não é possível excluir um pedido em aberto!');
+            if(!pedido)
+                res.status(404).json('Pedido não encontrado.');
+            
+            const diferencaTempo = Math.abs(Date.getTime() - pedido.statusPedido.getTime());
+            const diferencaDataPedido = Math.ceil(diferencaTempo / (1000 * 3600 * 24)); 
+            
+            if (pedido.statusPedido === EM_SEPARACAO || diferencaDataPedido <= 30)
+                return res.status(400).json('Não é possível excluir um pedido em aberto.');
 
-            await collectionPedidos.deleteOne({ "_id": ObjectId(req.params.id) });
+            const pedidoExcluido = await collectionPedidos.deleteOne({ _id: ObjectId(req.params.id) });
 
-            return res.status(400).json("Pedido Excluído com sucesso!");
+            return res.status(400).json(pedidoExcluido);
         } catch (err) {
-            return res.status(400).json("Erro na exclusão do pedido");
+            return res.status(400).json("Erro ao excluir pedido.")
         }
     };
    

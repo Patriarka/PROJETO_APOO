@@ -36,37 +36,33 @@ class Produto {
     static async novoProduto(req, res) {
         try {
             
-            let produtoEspecifico = {};
-        
-            if(req.body.temBordaInterna)
-                produtoEspecifico = {
-                    temBordaInterna,
-                    temBordaRebaixada
-                } = req.body;
-            else if(req.body.temPersonalizacaoDupla)
-                produtoEspecifico = {
-                    temPersonalizacaoDupla
-                } = req.body;
+            const collectionProdutos = await funcoesBancoDados.conectarBancoDados('produtos');
 
-            const produtoExiste = (await collectionProdutos).find({ 
-                tipo: req.body.tipo, 
-                tamanho: req.body.tamanho, 
-                precoCompra: req.body.precoCompra, 
-                precoVenda: req.body.precoVenda, 
-                img: req.body.img, 
-                cor: req.body.cor, 
-                corLetras: req.body.corLetras
-            });
+            let novoProduto;
+
+            if(req.body.tipo === 'bandeira')
+                novoProduto = new Bandeira(req.body.idPedidoFabrica, req.body.tipo, req.body.tamanho, req.body.qtde, req.body.precoCompra, req.body.precoVenda, req.body.dataFabricacao, req.body.img, req.body.cor, req.body.corLetras, req.body.statusProduto, req.body.temPersonalizacaoDupla);
+
+            else if(req.body.tipo === 'tapete')
+                novoProduto = new Tapete(req.body.idPedidoFabrica, req.body.tipo, req.body.tamanho, req.body.qtde, req.body.precoCompra, req.body.precoVenda, req.body.dataFabricacao, req.body.img, req.body.cor, req.body.corLetras, req.body.statusProduto, req.body.temBordaInterna, req.body.temBordaInterna);
+        
+            const compararProduto = (({ idPedidoFabrica, qtde, dataFabricacao, precoCompra, precoVenda, statusProduto, ...produto }) => produto)(novoProduto);
             
-            if(produtoExiste)
-                (await collectionProdutos).updateOne({ $inc: { qtde: 1 } });
+            const produtoExiste = await collectionProdutos.findOne(compararProduto);
+
+            if (produtoExiste){
+                await collectionProdutos.updateOne(produtoExiste, { $inc: { qtde: -1 } });
+                return res.status(200).json('Produto atualizado.');
+            };
+
+            // enviar email com produtos não existentes para a fabrica
             
             await collectionProdutos.insertOne(novoProduto);
 
-            res.status(200).json(novoProduto);
+            return res.status(200).json(novoProduto);
 
-        } catch(err){
-            res.status(400).json('Erro ao cadastrar o produto');
+        } catch (err) {
+            return res.status(400).json('Erro ao cadastrar o produto');
         };
     };
 

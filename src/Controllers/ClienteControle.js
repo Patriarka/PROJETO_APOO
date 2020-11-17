@@ -1,4 +1,3 @@
-const { MongoClient } = require('mongodb');
 const { ObjectId } = require('mongodb');
 
 const funcoesBancoDados = require("../bancoDados.js");
