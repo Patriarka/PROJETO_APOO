@@ -1,82 +1,92 @@
+const MongoClient = require('mongodb').MongoClient;
 const { ObjectId } = require("mongodb");
-const funcoesBancoDados = require("../bancoDados.js");
 
-var statusPedido = {
+const bd = require("../bancoDados.js");
+
+var StatusPedido = {
     EM_SEPARACAO: 0,
     DEVOLVIDO: 1,
     ENTREGUE: 2
 };
 
+var FormaPagamento = {
+    DINHEIRO: 0,
+    CARTAO: 1,
+    BOLETO: 2
+}
+
 class Pedido {
 
-    static STATUS_PEDIDO = statusPedido;
-
-    constructor(formaPagamento, endereco, dataPedido, statusPedido, idCliente) {
-        this.formaPagamento = formaPagamento;
+    constructor(FormaPagamento, endereco, dataPedido, StatusPedido, idCliente) {
+        this.formaPagamento = FormaPagamento;
         this.endereco = endereco;
         this.dataPedido = dataPedido;
-        this.STATUS_PEDIDO = statusPedido;
+        this.StatusPedido = StatusPedido;
         this.idCliente = idCliente;
     };
 
     static async novoPedido(req, res) {
         try {
-
-            const collectionPedidos = await funcoesBancoDados.conectarBancoDados('pedidos');
-
-            let novoPedido = new Pedido(req.body.formaPagamento, req.body.endereco, req.body.dataPedido, req.body.statusPedido, req.body.idCliente);
+            let novoPedido = new Pedido(req.body.formaPagamento, req.body.endereco, req.body.dataPedido, req.body.StatusPedido, req.body.idCliente);
+            const collectionPedidos = await bd.conectarBancoDados('pedidos');
 
             await collectionPedidos.insertOne(novoPedido);
 
-            return res.status(200).json(novoPedido);
+            res.status(200).json(novoPedido);
         } catch (err) {
             console.log(err);
-            return res.status(400).json('Erro ao cadastrar o pedido');
+            res.status(400).json('Erro ao cadastrar o pedido');
         };
     };
 
-    static async listarPedido(req, res) {
+    static async pegarPedido(req, res) {
         try {
-
-            const collectionPedidos = await funcoesBancoDados.conectarBancoDados('pedidos');
-            const pedido = await collectionPedidos.findOne({ _id: ObjectId(req.params.id) });
-
-            return res.status(200).json(pedido);
+            const collectionPedidos = await bd.conectarBancoDados('pedidos');
+            const pedido = await collectionPedidos.findOne({ "_id": ObjectId(req.params.id) });
+            
+            res.status(200).json(pedido);
         } catch (err) {
-            return res.status(400).json("Erro no carregamento das informações.");
+            console.log(err);
+            res.status(400).json('Erro no carregamento das informações');
         };
     };
-
+    
     static async excluirPedido(req, res) {
         try {
-            const collectionPedidos = funcoesBancoDados.conectarBancoDados('pedidos');
-            // verificar se o pedido está em aberto
-            const pedido = (await collectionPedidos).findOne({ _id: ObjectId(req.params.id) });
+            const collectionPedidos = await bd.conectarBancoDados('pedidos');
+            const pedido = await collectionPedidos.findOne({ "_id": ObjectId(req.params.id) });
 
-            if (pedido.statusPedido !== ENTREGUE)
-                return res.status(400).json('Não é possível excluir um pedido em aberto.');
+            if (pedido.StatusPedido !== 'ENTREGUE')
+                return res.status(400).json('Não é possível excluir um pedido em aberto!');
 
-            const pedidoExcluido = await collectionPedidos.deleteOne({ _id: ObjectId(req.params.id) });
+            await collectionPedidos.deleteOne({ "_id": ObjectId(req.params.id) });
 
-            return res.status(400).json(pedidoExcluido);
+            return res.status(400).json("Pedido Excluído com sucesso!");
         } catch (err) {
-            return res.status(400).json("Erro.")
+            return res.status(400).json("Erro na exclusão do pedido");
         }
     };
-
+   
     static async editarPedido(req, res) {
         try {
-            const collectionPedidos = await funcoesBancoDados.conectarBancoDados('pedidos');
+            const {
+                formaPagamento,
+                endereco,
+                dataPedido,
+                StatusPedido,
+                idCliente
+            } = req.body;
 
-            const documentoPedido = await collectionPedidos.findOne({ _id: ObjectId(req.params.id) });
+            const collectionPedidos = await bd.conectarBancoDados('pedidos');
 
-            if (!documentoPedido)
-                return res.status(400).json('Pedido não existe.');
+            const pedido = await collectionPedidos.findOne({ "_id": ObjectId(req.params.id) });
+            
+            if (!pedido)
+                return res.status(400).json('Pedido não existe!');
 
-            // pode atualizar o tipo de documento ? 
-            let documentoAtualizado = await collectionPedidos.updateOne(documentoPedido, { $set: { nome: req.body.nome, endereco: req.body.endereco, email: req.body.email, telefone: req.body.telefone, [req.body.tipoDocumento]: [req.body.documento] } });
+            await collectionPedidos.updateOne(pedido, { $set: { formaPagamento, endereco, dataPedido, StatusPedido, idCliente } } );
 
-            return res.status(200).json(documentoAtualizado);
+            return res.status(200).json(pedido);
         } catch (err) {
             return res.status(400).json('Erro ao atualizar as informações.');
         }
@@ -86,7 +96,7 @@ class Pedido {
 
 async function listarTodosPedidos(req, res) {
     try {
-        const collectionPedidos = funcoesBancoDados.conectarBancoDados('pedidos');
+        const collectionPedidos = await bd.conectarBancoDados('pedidos');
         const pedidos = await collectionPedidos.find({}).toArray();
 
         return res.status(200).json(pedidos);

@@ -1,4 +1,6 @@
+const { MongoClient } = require('mongodb');
 const { ObjectId } = require('mongodb');
+
 const funcoesBancoDados = require("../bancoDados.js");
 
 class Cliente {
@@ -10,79 +12,79 @@ class Cliente {
         this.email = email;
     };
 
-    static async cadastrarCliente(req, res) {
-
-        const collectionClientes = await funcoesBancoDados.conectarBancoDados('clientes');
-
-        // verificar se a conexão com o banco falhou
-
-        let novoCliente = {}, usuarioExiste = {};
-
-        usuarioExiste = await collectionClientes.findOne({ [req.body.tipoDocumento]: req.body.documento });
-
-        if (usuarioExiste)
-            return res.status(400).json('Cliente existente.');
-
-        if (req.body.tipoDocumento === 'cpf')
-            novoCliente = new PessoaFisica(req.body.nome, req.body.telefone, req.body.endereco, req.body.email, req.body.documento)
-        else if (req.body.tipoDocumento === 'cnpj')
-            novoCliente = new PessoaJuridica(req.body.nome, req.body.telefone, req.body.endereco, req.body.email, req.body.documento)
-        else if (req.body.tipoDocumento === 'sigla')
-            novoCliente = new OrgaoPublico(req.body.nome, req.body.telefone, req.body.endereco, req.body.email, req.body.documento);
-
-        await collectionClientes.insertOne(novoCliente);
-
-        return res.status(200).json(novoCliente);
-    };
-
-    static async listarCliente(req, res) {
-
+    static async pegarCliente(req, res) {
         const collectionClientes = await funcoesBancoDados.conectarBancoDados('clientes');
 
         try {
             const cliente = await collectionClientes.findOne({ _id: ObjectId(req.params.id) });
 
-            if (!cliente)
-                return res.status(400).json('Cliente não cadastrado.');
-
-            return res.status(200).json(cliente);
+            res.status(200).json(cliente);
         } catch (err) {
-            return res.status(400).json("Erro no carregamento das informações.");
+            res.status(400).json("Erro no carregamento das informações.");
         };
     };
 
     static async excluirCliente(req, res) {
         try {
-
             const collectionClientes = await funcoesBancoDados.conectarBancoDados('clientes');
 
+            console.log(collectionClientes);
 
             const clienteExcluido = await collectionClientes.deleteOne({ _id: ObjectId(req.params.id) });
 
-            // verificar se o cliente possui algum pedido em aberto
+            res.status(400).json(clienteExcluido); 
 
-            return res.status(400).json(clienteExcluido);
         } catch (err) {
-            return res.status(400).json("Erro.")
+            res.status(400).json("Erro.")
         }
     };
 
     static async editarCliente(req, res) {
+
+        const {
+            nome, 
+            endereco,
+            email,
+            telefone,
+            cpf,
+            cnpj,
+            sigla
+        } = req.body;
 
         try {
             const collectionClientes = await funcoesBancoDados.conectarBancoDados('clientes');
 
             const documentoCliente = await collectionClientes.findOne({ _id: ObjectId(req.params.id) });
 
-            if (!documentoCliente)
-                return res.status(400).json('Cliente não cadastrado.');
+            let documentoAtualizado;
 
-            // pode atualizar o tipo de documento ? 
-            let documentoAtualizado = await collectionClientes.updateOne(documentoCliente, { $set: { nome: req.body.nome, endereco: req.body.endereco, email: req.body.email, telefone: req.body.telefone, [req.body.tipoDocumento]: [req.body.documento] } });
+            if(documentoCliente.cpf !== undefined)
+                documentoAtualizado = collectionClientes.updateOne(documentoCliente, { $set: { nome, endereco, email, telefone, "cpf": cpf }});
 
-            return res.status(200).json(documentoAtualizado);
+            if(documentoCliente.cnpj !== undefined)
+                documentoAtualizado = collectionClientes.updateOne(documentoCliente, { $set: { nome, endereco, email, telefone, "cnpj": cnpj }});
+
+            if(documentoCliente.sigla !== undefined)
+                documentoAtualizado = collectionClientes.updateOne(documentoCliente, { $set: { nome, endereco, email, telefone, "sigla": sigla }});
+
+            res.status(200).json(documentoAtualizado);
         } catch (err) {
-            return res.status(400).json('Erro ao atualizar as informações.');
+            res.status(400).json('Erro ao atualizar as informações.');
+        }
+    };
+
+    static async excluirCliente(req, res) {
+        try {
+            const collectionClientes = await funcoesBancoDados.conectarBancoDados('clientes');
+            const cliente = await collectionClientes.findOne({ "_id": ObjectId(req.params.id) });
+
+            // Verificar se o cliente não possui pedidos em aberto
+
+            await collectionClientes.deleteOne({ "_id": ObjectId(req.params.id) });
+
+            return res.status(400).json("Cliente Excluído com sucesso!");
+        } catch (err) {
+            return res.status(400).json("Erro na exclusão do cliente");
         }
     };
 };
@@ -94,20 +96,29 @@ class PessoaFisica extends Cliente {
     }
 
     static async cadastrarCliente(req, res) {
+
+        const {
+            nome,
+            telefone,
+            endereco,
+            email,
+            cpf,
+        } = req.body;
+
         const collectionClientes = await funcoesBancoDados.conectarBancoDados('clientes');
 
-        let novoCliente = {}, usuarioExiste = {};
+        let clienteExiste = await collectionClientes.findOne({ cpf });
 
-        usuarioExiste = await collectionClientes.findOne({ [req.body.tipoDocumento]: req.body.documento });
+        if(clienteExiste)
+            return res.status(400).json('Cliente já existente!');
 
-        if (usuarioExiste)
-            return res.status(400).json('Cliente existente.');
-
-        novoCliente = new PessoaFisica(req.body.nome, req.body.telefone, req.body.endereco, req.body.email, req.body.documento)
+        let novoCliente = new PessoaFisica(nome, telefone, endereco, email, cpf)
 
         await collectionClientes.insertOne(novoCliente);
 
-        return res.status(200).json(novoCliente);
+        console.log(novoCliente);
+        res.status(200).json(novoCliente);
+
     };
 };
 
@@ -118,20 +129,29 @@ class PessoaJuridica extends Cliente {
     };
 
     static async cadastrarCliente(req, res) {
+
+        const {
+            nome,
+            telefone,
+            endereco,
+            email,
+            cnpj,
+        } = req.body;
+
         const collectionClientes = await funcoesBancoDados.conectarBancoDados('clientes');
 
-        let novoCliente = {}, usuarioExiste = {};
+        let clienteExiste = await collectionClientes.findOne({ cnpj });
 
-        usuarioExiste = await collectionClientes.findOne({ [req.body.tipoDocumento]: req.body.documento });
+        if(clienteExiste)
+            return res.status(400).json('Cliente já existente!');
 
-        if (usuarioExiste)
-            return res.status(400).json('Cliente existente.');
-
-        novoCliente = new PessoaJuridica(req.body.nome, req.body.telefone, req.body.endereco, req.body.email, req.body.documento)
+        let novoCliente = new PessoaJuridica(nome, telefone, endereco, email, cnpj)
 
         await collectionClientes.insertOne(novoCliente);
 
-        return res.status(200).json(novoCliente);
+        console.log(novoCliente);
+        res.status(200).json(novoCliente);
+
     };
 };
 
@@ -142,33 +162,41 @@ class OrgaoPublico extends Cliente {
     };
 
     static async cadastrarCliente(req, res) {
+
+        const {
+            nome,
+            telefone,
+            endereco,
+            email,
+            sigla,
+        } = req.body;
+
         const collectionClientes = await funcoesBancoDados.conectarBancoDados('clientes');
 
-        let novoCliente = {}, usuarioExiste = {};
+        let clienteExiste = await collectionClientes.findOne({ sigla });
 
-        usuarioExiste = await collectionClientes.findOne({ [req.body.tipoDocumento]: req.body.documento });
+        if(clienteExiste)
+            return res.status(400).json('Cliente já existente!');
 
-        if (usuarioExiste)
-            return res.status(400).json('Cliente existente.');
-
-        novoCliente = new OrgaoPublico(req.body.nome, req.body.telefone, req.body.endereco, req.body.email, req.body.documento);
+        let novoCliente = new OrgaoPublico(nome, telefone, endereco, email, sigla)
 
         await collectionClientes.insertOne(novoCliente);
 
-        return res.status(200).json(novoCliente);
+        console.log(novoCliente);
+        res.status(200).json(novoCliente);
+
     };
 };
 
 async function listarTodosClientes(req, res) {
     try {
         const collectionClientes = await funcoesBancoDados.conectarBancoDados('clientes');
-
         const clientes = await collectionClientes.find({}).toArray();
 
-        return res.status(200).json(clientes);
+        res.status(200).json(clientes);
     } catch (err) {
         console.log(err);
-        return res.status(400).json("Erro no carregamento das informações.");
+        res.status(400).json("Erro no carregamento das informações.");
     };
 };
 
