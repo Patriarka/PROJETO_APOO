@@ -1,139 +1,174 @@
 const funcoesBancoDados = require("../bancoDados.js");
 
-const collectionProdutos = funcoesBancoDados.conectarBancoDados('produtos');
+var StatusProduto = {
+    EM_FABRICACAO: 'EM_FABRICACAO',
+    DISPONIVEL: 'DISPONIVEL',
+    INDISPONIVEL: 'INDISPONIVEL'
+};
 
-var statusProduto = {
-    EM_FABRICACAO: 0,
-    DISPONIVEL: 1,
-    INDISPONIVEL: 2
+var Tipo = {
+    SANITIZANTE: 'SANITIZANTE',
+    PINTADO: 'PINTADO',
+    VULCANIZADO: 'VULCANIZADO',
+    LISO: 'LISO',
+    FLAG_BANNER: 'FLAG_BANNER'
 };
 
 class Produto {
 
-    static STATUS_PRODUTO = statusProduto;
+    static TipoProduto(tipoProduto) {
+        switch (tipoProduto) {
+            case 0:
+                return Tipo.SANITIZANTE;
+            case 1:
+                return Tipo.PINTADO;
+            case 2:
+                return Tipo.VULCANIZADO;
+            case 3:
+                return Tipo.LISO;
+            case 4:
+                return Tipo.FLAG_BANNER;
+            default:
+                return -1;
+        };
+    };
 
-    constructor(idPedidoFabrica, idPedidoCliente, tipo, tamanho, qtde, precoCompra, precoVenda, dataFabricacao, img, cor, corLetras, statusProduto) {
-        this.idPedidoFabrica = idPedidoFabrica;
-        this.idPedidoCliente = idPedidoCliente;
-        this.tipo = tipo;
+    static StatusProduto(pagamento) {
+        switch (pagamento) {
+            case 0:
+                return StatusProduto.EM_FABRICACAO;
+            case 1:
+                return StatusProduto.DISPONIVEL;
+            case 2:
+                return StatusProduto.INDISPONIVEL;
+            default:
+                return -1;
+        };
+    };
+
+    constructor(tipo, tamanho, qtde, precoCompra, precoVenda, img, cor, corLetras) {
+        this.tipo = TipoProduto(tipo);
         this.tamanho = tamanho;
         this.precoCompra = precoCompra;
         this.precoVenda = precoVenda;
         this.img = img;
         this.cor = cor;
         this.corLetras = corLetras;
-        
-        // verificarEstoque()
-        // Se o produto já estiver cadastrado no "estoque". não executar a fabricação 
-        // StatusProduto = DISPONIVEL
-        // Pegar as características de um produto anteriormente "pronto"
-
-        this.dataFabricacao = dataFabricacao;
         this.qtde = qtde;
-        this.statusProduto = statusProduto;
     };
 
     static async novoProduto(req, res) {
         try {
-            
             const collectionProdutos = await funcoesBancoDados.conectarBancoDados('produtos');
 
             let novoProduto;
 
-            if(req.body.tipo === 'bandeira')
-                novoProduto = new Bandeira(req.body.idPedidoFabrica, req.body.tipo, req.body.tamanho, req.body.qtde, req.body.precoCompra, req.body.precoVenda, req.body.dataFabricacao, req.body.img, req.body.cor, req.body.corLetras, req.body.statusProduto, req.body.temPersonalizacaoDupla);
+            if (req.body.produtoEspecificado === 'bandeira')
+                novoProduto = new Bandeira(req.body.tipo, req.body.tamanho, req.body.qtde, req.body.precoCompra, req.body.precoVenda, req.body.dataFabricacao, req.body.img, req.body.cor, req.body.corLetras, req.body.statusProduto, req.body.temPersonalizacaoDupla);
 
-            else if(req.body.tipo === 'tapete')
+            else if (req.body.produtoEspecificado === 'tapete')
                 novoProduto = new Tapete(req.body.idPedidoFabrica, req.body.tipo, req.body.tamanho, req.body.qtde, req.body.precoCompra, req.body.precoVenda, req.body.dataFabricacao, req.body.img, req.body.cor, req.body.corLetras, req.body.statusProduto, req.body.temBordaInterna, req.body.temBordaInterna);
-        
+
             const compararProduto = (({ idPedidoFabrica, qtde, dataFabricacao, precoCompra, precoVenda, statusProduto, ...produto }) => produto)(novoProduto);
-            
+
             const produtoExiste = await collectionProdutos.findOne(compararProduto);
 
-            if (produtoExiste){
-                await collectionProdutos.updateOne(produtoExiste, { $inc: { qtde: -1 } });
-                return res.status(200).json('Produto atualizado.');
-            };
+            if (produtoExiste)
+                return res.status(400).json('Produto já cadastrado.');
 
-            // enviar email com produtos não existentes para a fabrica
-            
             await collectionProdutos.insertOne(novoProduto);
 
             return res.status(200).json(novoProduto);
-
         } catch (err) {
             return res.status(400).json('Erro ao cadastrar o produto');
         };
     };
 
-    static async editarProduto(req, res) {
-
-    };
-
     static async apagarProduto(req, res) {
+        const { id } = req.body;
 
+        try {
+            const collectionProdutos = await funcoesBancoDados.conectarBancoDados('produtos')
+
+            const produto = await collectionProdutos.findOne({ id });
+            
+            if(produto.qtde > 0)
+                return res.status(400).json('Não é possível realizar a exclusão.');
+
+            await collectionProdutos.deleteOne({ "_id": ObjectId(id) });
+
+            return res.status(400).json("Produto excluído com sucesso!");
+        } catch (err) {
+            return res.status(400).json("Erro na exclusão do produto");
+        }
     };
-
-    static async filtrarProduto(req, res) {
-
-    };
-
+    
 };
 
 class Tapete extends Produto {
 
-    constructor(temBordaInterna) {
+    constructor(tipo, tamanho, qtde, precoCompra, precoVenda, img, cor, corLetras, temBordaInterna, temBordaRebaixada) {
+        super(tipo, tamanho, qtde, precoCompra, precoVenda, img, cor, corLetras);
         this.temBordaInterna = temBordaInterna;
         this.temBordaRebaixada = temBordaRebaixada;
     }
 
     static async novoProduto(req, res) {
+        
+        const collectionProdutos = await funcoesBancoDados.conectarBancoDados('produtos');
 
+        const produtoExiste = await collectionProdutos.findOne({ tipo: req.body.tipo, tamanho: req.body.tamanho, precoCompra: req.body.precoCompra, precoVenda: req.body.precoVenda, img: req.body.img, cor: req.body.cor, corLetras: req.body.corLetras });
+        
+        if (produtoExiste)
+            await collectionProdutos.updateOne(produtoExiste, { $inc: { qtde: 1 } });
+        
         let novoProduto = {};
-
-        const produtoExiste = (await collectionProdutos).findOne({ tipo: tipo, tamanho: tamanho, precoCompra: precoCompra, precoVenda: precoVenda, img: img, cor: cor, corLetras: corLetras });
         
-        if(produtoExiste)
-            (await collectionProdutos).updateOne({ $inc: { qtde: 1 } });
-        
-        novoProduto = new Bandeira(req.body.nome, req.body.telefone, req.body.endereco, req.body.email, req.body.documento);
+        novoProduto = new Tapete(req.body.tipo, req.body.tamanho, 0, req.body.precoCompra, req.body.precoVenda, req.body.img, req.body.cor, req.body.corLetras, req.body.temBordaInterna, req.body.temBordaRebaixada);
 
         await collectionProdutos.insertOne(novoProduto);
 
         res.status(200).json(novoProduto);
     };
+
 };
 
 class Bandeira extends Produto {
 
-    constructor(temPersonalizacaoDupla) {
+    constructor(tipo, tamanho, qtde, precoCompra, precoVenda, img, cor, corLetras, temPersonalizacaoDupla) {
+        super(tipo, tamanho, qtde, precoCompra, precoVenda, img, cor, corLetras, temPersonalizacaoDupla);
         this.temPersonalizacaoDupla = temPersonalizacaoDupla;
     }
 
     static async novoProduto(req, res) {
+        
+        const collectionProdutos = await funcoesBancoDados.conectarBancoDados('produtos');
 
+        const produtoExiste = await collectionProdutos.findOne({ tipo: req.body.tipo, tamanho: req.body.tamanho, precoCompra: req.body.precoCompra, precoVenda: req.body.precoVenda, img: req.body.img, cor: req.body.cor, corLetras: req.body.corLetras });
+        
+        if (produtoExiste)
+            await collectionProdutos.updateOne(produtoExiste, { $inc: { qtde: 1 } });
+        
         let novoProduto = {};
-
-        const produtoExiste = (await collectionProdutos).findOne({ tipo: tipo, tamanho: tamanho, precoCompra: precoCompra, precoVenda: precoVenda, img: img, cor: cor, corLetras: corLetras });
         
-        if(produtoExiste)
-            (await collectionProdutos).updateOne({ $inc: { qtde: 1 } });
-        
-        novoProduto = new Bandeira(req.body.nome, req.body.telefone, req.body.endereco, req.body.email, req.body.documento);
+        novoProduto = new Bandeira(req.body.tipo, req.body.tamanho, 0, req.body.precoCompra, req.body.precoVenda, req.body.img, req.body.cor, req.body.corLetras, req.body.temPersonalizacaoDupla);
 
         await collectionProdutos.insertOne(novoProduto);
 
         res.status(200).json(novoProduto);
     };
+
 };
 
-async function listarTodosProdutos(req, res) {
+async function listarProdutos(req, res){
     try {
+        const collectionProdutos = await bd.conectarBancoDados('produtos');
         const produtos = await collectionProdutos.find({}).toArray();
-        res.status(200).json(produtos);
+        return res.status(200).json(produtos);
     } catch (err) {
-        res.status(400).json("Erro no carregamento das informações.");
+        return res.status(400).json("Erro no carregamento das informações.");
     };
-};
+}
 
-module.exports = Produto;
+module.exports = { Produto, Tapete, Bandeira, listarProdutos }
+

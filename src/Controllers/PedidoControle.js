@@ -1,4 +1,30 @@
 const { ObjectId } = require("mongodb");
+const nodemailer = require("nodemailer");
+
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    host: 'smtp.gmail.com',
+    pool: true,
+    auth: {
+        user: 'villablumer@gmail.com',
+        pass: 'yphawyy98teste',
+        refreshToken: '1//04crZwXBujhtXCgYIARAAGAQSNwF-L9IrAtECJDQ-NWaSjLS-FgoqCnzVeQMA5WLKl6yG5AQx5INznYHT7yZhko1mClS44Y2IdYk',
+        accessToken: 'ya29.A0AfH6SMDxc13CZBPt6yKPctMHhACesp6A9It-G3YhyjLWO38repUGpuXakz1nT-ZpX1PXTBWlF94rplNh-X8fZbL8jGnIv7yb7OY3dCLmopKdW6dUVcBlvftnIisBcfl37q0b8JpCihSgujn1CxyqLqg-eDmElbJRv6YmAo8IbdQ'
+    },
+    from: {
+        from: 'Villa Blumer villablumer@gmail.com'
+    }
+});
+
+transporter.verify(function (error, success) {
+    if (error) console.log('deu erro', error);
+    if (success) {
+        console.log('deu sucesso', success);
+        transporter.on('token', token => {
+            console.log(token.user, token.accessToken, token.expires)
+        })
+    }
+});
 
 const bd = require("../bancoDados.js");
 
@@ -14,7 +40,7 @@ var TodasFormasPagamento = {
     BOLETO: 'BOLETO'
 };
 
-class Pedido {
+class PedidoEmpresa {
 
     static encontrarStatus(status) {
         switch (status) {
@@ -46,27 +72,45 @@ class Pedido {
         };
     };
 
-    constructor(formaPagamento, endereco, dataPedido, statusPedido, idCliente) {
-        this.formaPagamento = Pedido.encontrarPagamento(formaPagamento);
-        this.statusPedido = Pedido.encontrarStatus(statusPedido);
+    constructor(formaPagamento, endereco, dataPedido, statusPedido, listaProdutos) {
+        this.formaPagamento = PedidoEmpresa.encontrarPagamento(formaPagamento);
+        this.statusPedido = PedidoEmpresa.encontrarStatus(statusPedido);
         this.endereco = endereco;
         this.dataPedido = dataPedido;
-        this.idCliente = idCliente;
+        this.listaProdutos = listaProdutos;
     };
 
     static async novoPedido(req, res) {
         try {
+
+            const {
+                listaProdutos
+            } = req.body;
+
+            console.log(listaProdutos.length)
+            /*
+            for (let i = 0; i < listaProdutos.length; i++) {
+                if (verificarProduto(listaProdutos[i].idProduto) == false)
+                    return res.status(400).json(`ID do produto inválido`, listaProdutos[i].idProduto);
+            }
+            */
             const collectionPedidos = await bd.conectarBancoDados('pedidos');
 
             const dataPedido = new Date();
-        
-            let novoPedido = new Pedido(req.body.formaPagamento, req.body.endereco, dataPedido, req.body.statusPedido, req.body.idCliente);
 
-            if(novoPedido.statusPedido === -1 || novoPedido.formaPagamento === -1) return res.status(400).json('Status do pedido ou do pagamento inválido.');
+            let { formaPagamento, endereco, statusPedido } = req.body
+
+            let novoPedido = new PedidoEmpresa(formaPagamento, endereco, dataPedido, statusPedido, listaProdutos);
+
+            if (novoPedido.statusPedido === -1 || novoPedido.formaPagamento === -1)
+                return res.status(400).json('Status do pedido ou do pagamento inválido.');
 
             await collectionPedidos.insertOne(novoPedido);
 
-            return res.status(200).json(novoPedido); 
+            PedidoEmpresa.enviarEmail(listaProdutos, 'etc');
+
+            return res.status(200).json(novoPedido);
+
         } catch (err) {
             console.log(err);
             return res.status(400).json('Erro ao cadastrar o pedido');
@@ -77,8 +121,8 @@ class Pedido {
         try {
             const collectionPedidos = await bd.conectarBancoDados('pedidos');
             const pedido = await collectionPedidos.findOne({ "_id": ObjectId(req.params.id) });
-            
-            if(!pedido)
+
+            if (!pedido)
                 return res.status(404).json('Pedido não encontrado.');
 
             res.status(200).json(pedido);
@@ -87,18 +131,18 @@ class Pedido {
             res.status(400).json('Erro no carregamento das informações');
         };
     };
-    
+
     static async excluirPedido(req, res) {
         try {
             const collectionPedidos = await bd.conectarBancoDados('pedidos');
             const pedido = await collectionPedidos.findOne({ _id: ObjectId(req.params.id) });
 
-            if(!pedido)
+            if (!pedido)
                 res.status(404).json('Pedido não encontrado.');
-            
+
             const diferencaTempo = Math.abs(Date.getTime() - pedido.statusPedido.getTime());
-            const diferencaDataPedido = Math.ceil(diferencaTempo / (1000 * 3600 * 24)); 
-            
+            const diferencaDataPedido = Math.ceil(diferencaTempo / (1000 * 3600 * 24));
+
             if (pedido.statusPedido === EM_SEPARACAO || diferencaDataPedido <= 30)
                 return res.status(400).json('Não é possível excluir um pedido em aberto.');
 
@@ -109,32 +153,102 @@ class Pedido {
             return res.status(400).json("Erro ao excluir pedido.")
         }
     };
-   
-    static async editarPedido(req, res) {
+
+    static async enviarEmail(listaProdutos, idFabrica) {
+        let mensagem = {
+            from: "villablumer@gmail.com",
+            to: "msantana@alunos.utfpr.edu.br ",
+            subject: "Pedido X: Fabricação de produtos",
+            html: `<br>e agora?</br>`
+        };
+
+        let resposta = await transporter.sendMail(mensagem);
+
+        console.log('aq', resposta);
+
+        if(resposta)
+            return true;
+        else return false;
+    };
+};
+
+class PedidoCliente extends PedidoEmpresa {
+
+    constructor(formaPagamento, endereco, dataPedido, statusPedido, idCliente, listaProdutos) {
+        super(formaPagamento, endereco, dataPedido, statusPedido, idCliente, listaProdutos);
+        this.idCliente = idCliente;
+    };
+
+    static async novoPedido(req, res) {
         try {
+
+            const objectIdValido = ObjectId.isValid(req.body.idCliente);
+
+            if (objectIdValido === false)
+                return res.status(400).json('ID inválido.');
+
+            const resposta = await verificarCliente(new ObjectId(req.body.idCliente));
+
+            if (resposta === false)
+                return res.status(404).json('Cliente não encontrado.');
+
             const {
-                formaPagamento,
-                endereco,
-                dataPedido,
-                StatusPedido,
-                idCliente
+                listaProdutos
             } = req.body;
+
+            for (let i = 0; i < listaProdutos.length; i++) {
+                if (verificarProduto(listaProdutos[i].idProduto) == false);
+                return res.status(400).json(`ID do produto inválido`);
+            }
 
             const collectionPedidos = await bd.conectarBancoDados('pedidos');
 
-            const pedido = await collectionPedidos.findOne({ "_id": ObjectId(req.params.id) });
-            
-            if (!pedido)
-                return res.status(400).json('Pedido não existe!');
+            const dataPedido = new Date();
 
-            await collectionPedidos.updateOne(pedido, { $set: { formaPagamento, endereco, dataPedido, StatusPedido, idCliente } } );
+            let {
+                formaPagamento, endereco, statusPedido, idCliente
+            } = req.body
 
-            return res.status(200).json(pedido);
+            let novoPedido = new PedidoCliente(formaPagamento, endereco, dataPedido, statusPedido, idCliente, listaProdutos);
+
+            if (novoPedido.statusPedido === -1 || novoPedido.formaPagamento === -1)
+                return res.status(400).json('Status do pedido ou do pagamento inválido.');
+
+            await collectionPedidos.insertOne(novoPedido);
+
+            PedidoCliente.enviarEmail(listaProdutos, 'etc');
+
+            return res.status(200).json(novoPedido);
+
         } catch (err) {
-            return res.status(400).json('Erro ao atualizar as informações.');
-        }
-    };
+            console.log(err);
+            return res.status(400).json('Erro ao cadastrar o pedido');
+        };
+    }
+};
 
+async function verificarCliente(idCliente) {
+
+    const collectionClientes = await bd.conectarBancoDados('clientes');
+
+    const cliente = await collectionClientes.findOne({ _id: new ObjectId(idCliente) });
+
+    if (cliente)
+        return true;
+    else
+        return false;
+};
+
+async function verificarProduto(idProduto) {
+
+    const collectionProdutos = await bd.conectarBancoDados('clientes');
+
+    const produto = await collectionProdutos.findOne({ _id: new ObjectId(idProduto) });
+
+    if (produto)
+        return true;
+    else
+        return false;
 };
 
 async function listarTodosPedidos(req, res) {
@@ -148,4 +262,4 @@ async function listarTodosPedidos(req, res) {
     };
 };
 
-module.exports = { Pedido, listarTodosPedidos };
+module.exports = { PedidoEmpresa, PedidoCliente, listarTodosPedidos };

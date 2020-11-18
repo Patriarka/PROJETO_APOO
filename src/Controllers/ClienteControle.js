@@ -74,18 +74,28 @@ class Cliente {
 
     static async excluirCliente(req, res) {
         try {
-            const collectionClientes = await funcoesBancoDados.conectarBancoDados('clientes');
-            const cliente = await collectionClientes.findOne({ "_id": ObjectId(req.params.id) });
+            
+            const collectionPedidos = await funcoesBancoDados.conectarBancoDados('pedidos')
 
-            // Verificar se o cliente não possui pedidos em aberto
+            const pedidosCliente = await collectionPedidos.findOne({ idCliente: req.params.id, statusPedido: "EM_SEPARACAO" });
+            
+            if(pedidosCliente)
+                return res.status(400).json('Não é possível realizar a exclusão. O cliente possui pedidos em aberto.');
+
+            const collectionClientes = await funcoesBancoDados.conectarBancoDados('clientes');
+            const documentoCliente = await collectionClientes.findOne({ _id: ObjectId(req.params.id) });
+            
+            if(!documentoCliente)
+                return res.status(404).json('Cliente inexistente.');
 
             await collectionClientes.deleteOne({ "_id": ObjectId(req.params.id) });
 
-            return res.status(400).json("Cliente Excluído com sucesso!");
+            return res.status(400).json("Cliente excluído com sucesso!");
         } catch (err) {
             return res.status(400).json("Erro na exclusão do cliente");
         }
     };
+    
 };
 
 class PessoaFisica extends Cliente {
@@ -187,7 +197,7 @@ class OrgaoPublico extends Cliente {
     };
 };
 
-async function listarTodosClientes(req, res) {
+async function listarClientes(req, res) {
     try {
         const collectionClientes = await funcoesBancoDados.conectarBancoDados('clientes');
         const clientes = await collectionClientes.find({}).toArray();
@@ -199,4 +209,4 @@ async function listarTodosClientes(req, res) {
     };
 };
 
-module.exports = { Cliente, listarTodosClientes, PessoaFisica, PessoaJuridica, OrgaoPublico };
+module.exports = { Cliente, listarClientes, PessoaFisica, PessoaJuridica, OrgaoPublico };
