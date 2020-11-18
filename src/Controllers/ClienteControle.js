@@ -23,21 +23,6 @@ class Cliente {
         };
     };
 
-    static async excluirCliente(req, res) {
-        try {
-            const collectionClientes = await funcoesBancoDados.conectarBancoDados('clientes');
-
-            console.log(collectionClientes);
-
-            const clienteExcluido = await collectionClientes.deleteOne({ _id: ObjectId(req.params.id) });
-
-            res.status(400).json(clienteExcluido); 
-
-        } catch (err) {
-            res.status(400).json("Erro.")
-        }
-    };
-
     static async editarCliente(req, res) {
 
         const {
