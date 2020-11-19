@@ -23,7 +23,7 @@ routes.delete('/pedidos/:id', PedidoControle.PedidoEmpresa.excluirPedido);
 
 routes.post('/produtos/tapetes', ProdutoControle.Tapete.novoProduto);
 routes.post('/produtos/bandeiras', ProdutoControle.Bandeira.novoProduto);
-routes.get('/pedidos', ProdutoControle.listarProdutos);
+routes.get('/produtos', ProdutoControle.listarProdutos);
 
 routes.post('/fabricas', FabricaControle.Fabrica.novaFabrica);
 

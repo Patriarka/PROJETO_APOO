@@ -17,9 +17,9 @@ const transporter = nodemailer.createTransport({
 });
 
 transporter.verify(function (error, success) {
-    if (error) console.log('deu erro', error);
+    if (error) console.log('Erro!', error);
     if (success) {
-        console.log('deu sucesso', success);
+        console.log('Sucesso!', success);
         transporter.on('token', token => {
             console.log(token.user, token.accessToken, token.expires)
         })
@@ -72,28 +72,29 @@ class PedidoEmpresa {
         };
     };
 
-    constructor(formaPagamento, endereco, dataPedido, statusPedido, listaProdutos) {
+    constructor(formaPagamento, endereco, dataPedido, statusPedido, listaProdutos, idFabrica) {
         this.formaPagamento = PedidoEmpresa.encontrarPagamento(formaPagamento);
         this.statusPedido = PedidoEmpresa.encontrarStatus(statusPedido);
         this.endereco = endereco;
         this.dataPedido = dataPedido;
         this.listaProdutos = listaProdutos;
+        this.idFabrica = idFabrica;
     };
 
     static async novoPedido(req, res) {
         try {
-
             const {
                 listaProdutos
             } = req.body;
-
-            console.log(listaProdutos.length)
-            /*
-            for (let i = 0; i < listaProdutos.length; i++) {
+            
+            for (let i = 0; i < listaProdutos.length; i++) { 
                 if (verificarProduto(listaProdutos[i].idProduto) == false)
                     return res.status(400).json(`ID do produto inválido`, listaProdutos[i].idProduto);
             }
-            */
+            // VERIFICA SE O ID DO PRODUTO EXISTE 
+            // SE A QUANTIDADE A QUANTIDADE FOR == 0, TEMOS QUE PEDIR PARA A FÁBRICA FABRICAR,
+            // ESSES PRODUTOS VÃO SER PASSADOS PARA UMA LISTA AO QUAL SERÁ FEITO O ENVIO DO EMAIL
+
             const collectionPedidos = await bd.conectarBancoDados('pedidos');
 
             const dataPedido = new Date();
@@ -105,7 +106,7 @@ class PedidoEmpresa {
             if (novoPedido.statusPedido === -1 || novoPedido.formaPagamento === -1)
                 return res.status(400).json('Status do pedido ou do pagamento inválido.');
 
-            await collectionPedidos.insertOne(novoPedido);
+            // await collectionPedidos.insertOne(novoPedido);
 
             PedidoEmpresa.enviarEmail(listaProdutos, 'etc');
 
@@ -155,11 +156,23 @@ class PedidoEmpresa {
     };
 
     static async enviarEmail(listaProdutos, idFabrica) {
+
+        // pegar a collection fábricas e pegar o email da respectiva fabrica
+
+        const collectionProdutos = await bd.conectarBancoDados('produtos');
+
+        let produto = {};
+
+        for (let i = 0; i < listaProdutos.length; i++) { // verificar e enviar apenas os produtos que precisamos fazer
+            produto += await collectionProdutos.findOne( listaProdutos[i].id );
+            console.log(JSON.stringify(produto[0]));
+        }
+
         let mensagem = {
             from: "villablumer@gmail.com",
             to: "msantana@alunos.utfpr.edu.br ",
             subject: "Pedido X: Fabricação de produtos",
-            html: `<br>e agora?</br>`
+            html: `<p>${JSON.stringify(produto)}</p>`
         };
 
         let resposta = await transporter.sendMail(mensagem);
@@ -174,8 +187,8 @@ class PedidoEmpresa {
 
 class PedidoCliente extends PedidoEmpresa {
 
-    constructor(formaPagamento, endereco, dataPedido, statusPedido, idCliente, listaProdutos) {
-        super(formaPagamento, endereco, dataPedido, statusPedido, idCliente, listaProdutos);
+    constructor(formaPagamento, endereco, dataPedido, statusPedido, idCliente, listaProdutos, idFabrica) {
+        super(formaPagamento, endereco, dataPedido, statusPedido, idCliente, listaProdutos, idFabrica);
         this.idCliente = idCliente;
     };
 
@@ -216,7 +229,7 @@ class PedidoCliente extends PedidoEmpresa {
 
             await collectionPedidos.insertOne(novoPedido);
 
-            PedidoCliente.enviarEmail(listaProdutos, 'etc');
+            // PedidoCliente.enviarEmail(w, 'etc');
 
             return res.status(200).json(novoPedido);
 

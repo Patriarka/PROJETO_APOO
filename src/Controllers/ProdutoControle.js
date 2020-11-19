@@ -1,11 +1,5 @@
 const funcoesBancoDados = require("../bancoDados.js");
 
-var StatusProduto = {
-    EM_FABRICACAO: 'EM_FABRICACAO',
-    DISPONIVEL: 'DISPONIVEL',
-    INDISPONIVEL: 'INDISPONIVEL'
-};
-
 var Tipo = {
     SANITIZANTE: 'SANITIZANTE',
     PINTADO: 'PINTADO',
@@ -28,19 +22,6 @@ class Produto {
                 return Tipo.LISO;
             case 4:
                 return Tipo.FLAG_BANNER;
-            default:
-                return -1;
-        };
-    };
-
-    static StatusProduto(pagamento) {
-        switch (pagamento) {
-            case 0:
-                return StatusProduto.EM_FABRICACAO;
-            case 1:
-                return StatusProduto.DISPONIVEL;
-            case 2:
-                return StatusProduto.INDISPONIVEL;
             default:
                 return -1;
         };
@@ -162,7 +143,7 @@ class Bandeira extends Produto {
 
 async function listarProdutos(req, res){
     try {
-        const collectionProdutos = await bd.conectarBancoDados('produtos');
+        const collectionProdutos = await funcoesBancoDados.conectarBancoDados('produtos');
         const produtos = await collectionProdutos.find({}).toArray();
         return res.status(200).json(produtos);
     } catch (err) {

@@ -51,7 +51,7 @@ class Cliente {
             if(documentoCliente.sigla !== undefined)
                 documentoAtualizado = collectionClientes.updateOne(documentoCliente, { $set: { nome, endereco, email, telefone, "sigla": sigla }});
 
-            res.status(200).json(documentoAtualizado);
+            res.status(200).json(documentoCliente);
         } catch (err) {
             res.status(400).json('Erro ao atualizar as informações.');
         }
