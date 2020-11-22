@@ -182,16 +182,4 @@ class OrgaoPublico extends Cliente {
     };
 };
 
-async function listarClientes(req, res) {
-    try {
-        const collectionClientes = await funcoesBancoDados.conectarBancoDados('clientes');
-        const clientes = await collectionClientes.find({}).toArray();
-
-        res.status(200).json(clientes);
-    } catch (err) {
-        console.log(err);
-        res.status(400).json("Erro no carregamento das informações.");
-    };
-};
-
 module.exports = { Cliente, listarClientes, PessoaFisica, PessoaJuridica, OrgaoPublico };

@@ -1,5 +1,6 @@
 const { ObjectId } = require("mongodb");
 const nodemailer = require("nodemailer");
+const bd = require("../bancoDados.js");
 
 const transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -25,8 +26,6 @@ transporter.verify(function (error, success) {
         })
     }
 });
-
-const bd = require("../bancoDados.js");
 
 var TodosStatusPedido = {
     EM_SEPARACAO: 'EM_SEPARACAO',
@@ -92,7 +91,9 @@ class PedidoEmpresa {
                     return res.status(400).json(`ID do produto inválido`, listaProdutos[i].idProduto);
             }
             // VERIFICA SE O ID DO PRODUTO EXISTE 
+            
             // SE A QUANTIDADE A QUANTIDADE FOR == 0, TEMOS QUE PEDIR PARA A FÁBRICA FABRICAR,
+
             // ESSES PRODUTOS VÃO SER PASSADOS PARA UMA LISTA AO QUAL SERÁ FEITO O ENVIO DO EMAIL
 
             const collectionPedidos = await bd.conectarBancoDados('pedidos');
@@ -106,7 +107,7 @@ class PedidoEmpresa {
             if (novoPedido.statusPedido === -1 || novoPedido.formaPagamento === -1)
                 return res.status(400).json('Status do pedido ou do pagamento inválido.');
 
-            // await collectionPedidos.insertOne(novoPedido);
+            await collectionPedidos.insertOne(novoPedido);
 
             PedidoEmpresa.enviarEmail(listaProdutos, 'etc');
 

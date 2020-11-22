@@ -10,6 +10,7 @@ const FabricaControle = require('./Controllers/FabricaControle');
 routes.post('/clienteFisico', ClienteControle.PessoaFisica.cadastrarCliente);
 routes.post('/clienteJuridico', ClienteControle.PessoaJuridica.cadastrarCliente);
 routes.post('/clienteOrgaoPublico', ClienteControle.OrgaoPublico.cadastrarCliente);
+
 routes.get('/clientes', ClienteControle.listarClientes);
 routes.get('/clientes/:id', ClienteControle.Cliente.pegarCliente);
 routes.delete('/clientes/:id', ClienteControle.Cliente.excluirCliente);
