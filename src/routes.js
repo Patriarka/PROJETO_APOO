@@ -2,30 +2,27 @@ const express = require('express');
 
 const routes = express.Router();
 
-const ClienteControle = require('./Controllers/ClienteControle');
-const PedidoControle = require('./Controllers/PedidoControle');
-const ProdutoControle = require('./Controllers/ProdutoControle');
-const FabricaControle = require('./Controllers/FabricaControle');
+const ClienteController = require('./Controllers/ClienteController');
+const PedidoController = require('./Controllers/PedidoController');
+const ProdutoController = require('./Controllers/ProdutoController');
+const FabricaController = require('./Controllers/FabricaController');
 
-routes.post('/clienteFisico', ClienteControle.PessoaFisica.cadastrarCliente);
-routes.post('/clienteJuridico', ClienteControle.PessoaJuridica.cadastrarCliente);
-routes.post('/clienteOrgaoPublico', ClienteControle.OrgaoPublico.cadastrarCliente);
+routes.post('/clientes', ClienteController.CadastrarCliente);
+routes.patch('/clientes/:id', ClienteController.EditarCliente);
+routes.delete('/clientes/:id', ClienteController.ApagarCliente);
+routes.get('/clientes', ClienteController.ListarClientes);
+routes.get('/clientes/:id', ClienteController.PegarCliente);
 
-routes.get('/clientes', ClienteControle.listarClientes);
-routes.get('/clientes/:id', ClienteControle.Cliente.pegarCliente);
-routes.delete('/clientes/:id', ClienteControle.Cliente.excluirCliente);
-routes.patch('/clientes/:id', ClienteControle.Cliente.editarCliente);
+routes.post('/pedidos', PedidoController.NovoPedido);
+routes.get('/pedidos/:id', PedidoController.PegarPedido);
+routes.get('/pedidos', PedidoController.listarTodosPedidos);
+routes.delete('/pedidos/:id', PedidoController.ExcluirPedido);
 
-routes.post('/pedidos/cliente', PedidoControle.PedidoCliente.novoPedido);
-routes.post('/pedidos/empresa', PedidoControle.PedidoEmpresa.novoPedido);
-routes.get('/pedidos', PedidoControle.listarTodosPedidos);
-routes.get('/pedidos/:id', PedidoControle.PedidoEmpresa.pegarPedido);
-routes.delete('/pedidos/:id', PedidoControle.PedidoEmpresa.excluirPedido);
+routes.post('/produtos', ProdutoController.NovoProduto);
+routes.delete('/produtos/:id', ProdutoController.ApagarProduto);
+routes.get('/produtos', ProdutoController.ListarProdutos);
 
-routes.post('/produtos/tapetes', ProdutoControle.Tapete.novoProduto);
-routes.post('/produtos/bandeiras', ProdutoControle.Bandeira.novoProduto);
-routes.get('/produtos', ProdutoControle.listarProdutos);
-
-routes.post('/fabricas', FabricaControle.Fabrica.novaFabrica);
+routes.post('/fabricas', FabricaController.NovaFabrica); 
+routes.get('/fabricas', FabricaController.ListarFabricas); 
 
 module.exports = routes;
