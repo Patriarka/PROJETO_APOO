@@ -116,7 +116,7 @@ async function enviarEmailFabrica(listaProdutos) {
     else return false;
 };
 
-async function pegarProduto(idProduto) {
+async function encontrarProduto(idProduto) {
 
     if (ObjectId.isValid(idProduto) === false)
         return;
@@ -129,7 +129,7 @@ async function pegarProduto(idProduto) {
 }
 
 module.exports = {
-    async NovoPedido(req, res) {
+    async cadastrarPedido(req, res) {
 
         try {
 
@@ -165,7 +165,7 @@ module.exports = {
             const collectionProdutos = await bd.conectarBancoDados('produtos');
 
             for (let i = 0; i < req.body.listaProdutos.length; i++) {
-                let produtoComparar = await pegarProduto(req.body.listaProdutos[i].idProduto);
+                let produtoComparar = await encontrarProduto(req.body.listaProdutos[i].idProduto);
 
                 if (req.body.idCliente) {
                     if (produtoComparar.qtde - req.body.listaProdutos[i].qtde < 0) {
@@ -213,7 +213,7 @@ module.exports = {
         }
     },
 
-    async PegarPedido(req, res) {
+    async listarPedido(req, res) {
         try {
             if (ObjectId.isValid(req.params.id) === false)
                 return res.status(404).json('ID inválido.');
@@ -231,7 +231,7 @@ module.exports = {
         };
     },
 
-    async ExcluirPedido(req, res) {
+    async excluirPedido(req, res) {
         try {
             if (ObjectId.isValid(req.params.id) === false)
                 return res.status(404).json('ID inválido.');
@@ -262,7 +262,7 @@ module.exports = {
         }
     },
 
-    async listarTodosPedidos(req, res) {
+    async listarPedidos(req, res) {
         try {
             const collectionPedidos = await bd.conectarBancoDados('pedidos');
             const pedidos = await collectionPedidos.find({}).toArray();

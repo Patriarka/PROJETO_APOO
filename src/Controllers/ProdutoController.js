@@ -10,7 +10,7 @@ var Tipo = {
     FLAG_BANNER: 'FLAG_BANNER'
 };
 
-function TipoProduto(tipoProduto) {
+function tipoProduto(tipoProduto) {
     switch (tipoProduto) {
         case 0:
             return Tipo.SANITIZANTE;
@@ -28,10 +28,10 @@ function TipoProduto(tipoProduto) {
 };
 
 module.exports = {
-    async NovoProduto(req, res){
+    async cadastrarProduto(req, res){
         try {
 
-            let tipo = TipoProduto(req.body.tipo) 
+            let tipo = tipoProduto(req.body.tipo) 
 
             if(tipo === -1) return res.status(404).json('Tipo inválido!');
 
@@ -43,8 +43,6 @@ module.exports = {
             else if (req.body.produtoEspecificado === 'tapete') novoProduto = new Tapete(req.body);
 
             novoProduto.qtde = 0;
-
-            console.log(novoProduto);
 
             const compararProduto = (({ idPedidoFabrica, qtde, precoCompra, precoVenda, ...produto }) => produto)(novoProduto);
 
@@ -58,22 +56,19 @@ module.exports = {
             return res.status(200).json(novoProduto);  
             
         } catch (err) {
+            console.log(err);
             return res.status(400).json('Erro ao cadastrar o produto');
         };
     },
 
-    async ApagarProduto(req, res){
-
-        if(ObjectId.isValid(req.params.id) === false)
-            return res.status(400).json('ID inválido.');    
-
+    async excluirProduto(req, res){
         try {
+            if(ObjectId.isValid(req.params.id) === false)
+                return res.status(400).json('ID inválido.'); 
+
             const collectionProdutos = await bd.conectarBancoDados('produtos');
 
             const produto = await collectionProdutos.findOne({ _id: ObjectId(req.params.id) });
-
-            console.log(req.params.id);
-            console.log(produto);
             
             if(produto.qtde > 0)
                 return res.status(400).json('Não é possível realizar a exclusão.');
@@ -82,11 +77,12 @@ module.exports = {
 
             return res.status(400).json("Produto excluído com sucesso!");
         } catch (err) {
+            console.log(err);
             return res.status(400).json("Erro na exclusão do produto.");
         }
     },
 
-    async ListarProdutos(req, res){
+    async listarProdutos(req, res){
         try {
             const collectionProdutos = await bd.conectarBancoDados('produtos');
 
@@ -94,6 +90,20 @@ module.exports = {
             
             return res.status(200).json(produtos);
         } catch (err) {
+            console.log(err);
+            return res.status(400).json("Erro no carregamento das informações!");
+        };
+    },
+
+    async listarProduto(req, res){
+        try {
+            const collectionProdutos = await bd.conectarBancoDados('produtos');
+
+            const produto = await collectionProdutos.findOne({_id: req.params.idProduto });
+            
+            return res.status(200).json(produto);
+        } catch (err) {
+            console.log(err);
             return res.status(400).json("Erro no carregamento das informações!");
         };
     }

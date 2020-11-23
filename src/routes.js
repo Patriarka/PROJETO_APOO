@@ -7,22 +7,25 @@ const PedidoController = require('./Controllers/PedidoController');
 const ProdutoController = require('./Controllers/ProdutoController');
 const FabricaController = require('./Controllers/FabricaController');
 
-routes.post('/clientes', ClienteController.CadastrarCliente);
-routes.patch('/clientes/:id', ClienteController.EditarCliente);
-routes.delete('/clientes/:id', ClienteController.ApagarCliente);
-routes.get('/clientes', ClienteController.ListarClientes);
-routes.get('/clientes/:id', ClienteController.PegarCliente);
+routes.post('/clientes', ClienteController.cadastrarCliente);
+routes.get('/clientes', ClienteController.listarClientes);
+routes.get('/clientes/:id', ClienteController.listarCliente);
+routes.patch('/clientes/:id', ClienteController.editarCliente);
+routes.delete('/clientes/:id', ClienteController.excluirCliente);
 
-routes.post('/pedidos', PedidoController.NovoPedido);
-routes.get('/pedidos/:id', PedidoController.PegarPedido);
-routes.get('/pedidos', PedidoController.listarTodosPedidos);
-routes.delete('/pedidos/:id', PedidoController.ExcluirPedido);
+routes.post('/pedidos', PedidoController.cadastrarPedido);
+routes.get('/pedidos', PedidoController.listarPedidos);
+routes.get('/pedidos/:id', PedidoController.listarPedido);
+routes.delete('/pedidos/:id', PedidoController.excluirPedido);
 
-routes.post('/produtos', ProdutoController.NovoProduto);
-routes.delete('/produtos/:id', ProdutoController.ApagarProduto);
-routes.get('/produtos', ProdutoController.ListarProdutos);
+routes.post('/produtos', ProdutoController.cadastrarProduto);
+routes.get('/produtos', ProdutoController.listarProdutos);
+routes.get('/produtos/:id', ProdutoController.listarProduto);
+routes.delete('/produtos/:id', ProdutoController.excluirProduto);
 
-routes.post('/fabricas', FabricaController.NovaFabrica); 
-routes.get('/fabricas', FabricaController.ListarFabricas); 
+routes.post('/fabricas', FabricaController.cadastrarFabrica); 
+routes.get('/fabricas', FabricaController.listarFabricas);
+routes.get('/fabricas/:id', FabricaController.listarFabrica);
+routes.delete('/fabricas/:id', FabricaController.excluirFabrica);
 
 module.exports = routes;

@@ -3,7 +3,7 @@ const { ObjectId } = require('mongodb');
 const bd = require("../bancoDados.js");
 
 module.exports = {
-    async CadastrarCliente(req, res) {
+    async cadastrarCliente(req, res) {
 
         try {
             const collectionClientes = await bd.conectarBancoDados('clientes');
@@ -28,7 +28,7 @@ module.exports = {
 
     },
 
-    async EditarCliente(req, res) {
+    async editarCliente(req, res) {
         try {
 
             if (ObjectId.isValid(req.params.id) === false)
@@ -54,7 +54,7 @@ module.exports = {
         }
     },
 
-    async ApagarCliente(req, res) {
+    async excluirCliente(req, res) {
 
         try {
             if (ObjectId.isValid(req.params.id) === false)
@@ -82,7 +82,7 @@ module.exports = {
         }
     },
 
-    async PegarCliente(req, res) {
+    async listarCliente(req, res) {
         try {
             if (ObjectId.isValid(req.params.id) === false) return res.status(400).json('ID inválido.');
 
@@ -99,7 +99,7 @@ module.exports = {
         };
     },
 
-    async ListarClientes(req, res) {
+    async listarClientes(req, res) {
         try {
             const collectionClientes = await bd.conectarBancoDados('clientes');
             const clientes = await collectionClientes.find({}).toArray();
