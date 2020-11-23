@@ -15,7 +15,7 @@ module.exports = {
             
         } catch (err) {
             console.log(err);
-            return res.status(400).json('Erro ao cadastrar a Fábrica');
+            return res.status(400).json('Erro ao cadastrar a fábrica.');
         };
     },
 
@@ -27,7 +27,8 @@ module.exports = {
     
             return res.status(200).json(fabricas);
         } catch (err) {
-            return res.status(400).json("Erro no carregamento das informações!");
+            console.log(err);
+            return res.status(400).json("Erro no carregamento das informações das fábricas.");
         };
     }
 }

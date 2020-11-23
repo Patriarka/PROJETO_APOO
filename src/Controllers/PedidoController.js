@@ -95,7 +95,7 @@ async function enviarEmailFabrica(listaProdutos) {
 
     var arrayItems = "";
     var n;
-    for (n in listaProdutos) 
+    for (n in listaProdutos)
         arrayItems += "<li>" + JSON.stringify(listaProdutos[n]) + "</li>";
 
 
@@ -131,80 +131,86 @@ async function pegarProduto(idProduto) {
 module.exports = {
     async NovoPedido(req, res) {
 
-        const formaPagamento = encontrarPagamento(req.body.formaPagamento);
-        const statusPedido = encontrarStatus(req.body.statusPedido);
+        try {
 
-        if (req.body.idCliente) {
-            const resposta = await verificarCliente(req.body.idCliente);
-
-            if (resposta === false)
-                return res.status(404).json('Cliente não encontrado.');
-        }
-
-        if (statusPedido === -1) return res.status(400).json('Status do pedido inválido!');
-        if (formaPagamento === -1) return res.status(400).json('Forma de pagamento inválida!');
-
-        for (let i = 0; i < req.body.listaProdutos.length; i++)
-            if (verificarProduto(req.body.listaProdutos[i].idProduto) === false)
-                return res.status(400).json('ID do produto inválido', req.body.listaProdutos[i].idProduto);
-
-        const dataPedido = new Date();
-
-        let dados = {
-            ...req.body,
-            dataPedido
-        };
-
-        if (!req.body.idCliente) novoPedido = new PedidoEmpresa(dados);
-        else novoPedido = new PedidoCliente(dados);
-
-        let listaProdutosFabricar = [];
-
-        const collectionProdutos = await bd.conectarBancoDados('produtos');
-
-        for (let i = 0; i < req.body.listaProdutos.length; i++) {
-            let produtoComparar = await pegarProduto(req.body.listaProdutos[i].idProduto);
+            const formaPagamento = encontrarPagamento(req.body.formaPagamento);
+            const statusPedido = encontrarStatus(req.body.statusPedido);
 
             if (req.body.idCliente) {
-                if (produtoComparar.qtde - req.body.listaProdutos[i].qtde < 0) {
+                const resposta = await verificarCliente(req.body.idCliente);
 
+                if (resposta === false)
+                    return res.status(404).json('Cliente não encontrado.');
+            }
+
+            if (statusPedido === -1) return res.status(400).json('Status do pedido inválido!');
+            if (formaPagamento === -1) return res.status(400).json('Forma de pagamento inválida!');
+
+            for (let i = 0; i < req.body.listaProdutos.length; i++)
+                if (verificarProduto(req.body.listaProdutos[i].idProduto) === false)
+                    return res.status(400).json('ID do produto inválido', req.body.listaProdutos[i].idProduto);
+
+            const dataPedido = new Date();
+
+            let dados = {
+                ...req.body,
+                dataPedido
+            };
+
+            if (!req.body.idCliente) novoPedido = new PedidoEmpresa(dados);
+            else novoPedido = new PedidoCliente(dados);
+
+            let listaProdutosFabricar = [];
+
+            const collectionProdutos = await bd.conectarBancoDados('produtos');
+
+            for (let i = 0; i < req.body.listaProdutos.length; i++) {
+                let produtoComparar = await pegarProduto(req.body.listaProdutos[i].idProduto);
+
+                if (req.body.idCliente) {
+                    if (produtoComparar.qtde - req.body.listaProdutos[i].qtde < 0) {
+
+                        let produtoNovo = produtoComparar;
+
+                        produtoNovo = {
+                            ...produtoNovo,
+                            qtde: req.body.listaProdutos[i].qtde - produtoComparar.qtde
+                        };
+
+                        listaProdutosFabricar.push(produtoNovo);
+                    };
+
+                    if (produtoComparar.qtde > 0) {
+                        let quantidadeDecrementada = produtoComparar.qtde - req.body.listaProdutos[i].qtde;
+                        await collectionProdutos.updateOne({ _id: ObjectId(req.body.listaProdutos[i].idProduto) }, { $inc: { qtde: quantidadeDecrementada } });
+                    }
+
+                } else {
                     let produtoNovo = produtoComparar;
 
                     produtoNovo = {
                         ...produtoNovo,
-                        qtde: req.body.listaProdutos[i].qtde - produtoComparar.qtde
+                        qtde: req.body.listaProdutos[i].qtde
                     };
 
                     listaProdutosFabricar.push(produtoNovo);
-                };
 
-                if (produtoComparar.qtde > 0) {
-                    let quantidadeDecrementada = produtoComparar.qtde - req.body.listaProdutos[i].qtde;
-                    await collectionProdutos.updateOne({ _id: ObjectId(req.body.listaProdutos[i].idProduto) }, { $inc: { qtde: quantidadeDecrementada } });
+                    await collectionProdutos.updateOne({ _id: ObjectId(req.body.listaProdutos[i].idProduto) }, { $inc: { qtde: req.body.listaProdutos[i].qtde } });
                 }
-
-            } else {
-                let produtoNovo = produtoComparar;
-
-                produtoNovo = {
-                    ...produtoNovo,
-                    qtde: req.body.listaProdutos[i].qtde
-                };
-
-                listaProdutosFabricar.push(produtoNovo);
-
-                await collectionProdutos.updateOne({ _id: ObjectId(req.body.listaProdutos[i].idProduto) }, { $inc: { qtde: req.body.listaProdutos[i].qtde } });
             }
+
+            if (listaProdutosFabricar)
+                enviarEmailFabrica(listaProdutosFabricar);
+
+            const collectionPedidos = await bd.conectarBancoDados('pedidos');
+
+            await collectionPedidos.insertOne(novoPedido);
+
+            return res.status(200).json("Pedido cadastrado com sucesso.");
+        } catch(err){
+            console.log(err);
+            return res.status(400).json('Erro ao cadastrar o pedido.');
         }
-
-        if (listaProdutosFabricar)
-            enviarEmailFabrica(listaProdutosFabricar);
-
-        const collectionPedidos = await bd.conectarBancoDados('pedidos');
-
-        await collectionPedidos.insertOne(novoPedido);
-
-        return res.status(200).json("Pedido cadastrado com sucesso.");
     },
 
     async PegarPedido(req, res) {
@@ -221,7 +227,7 @@ module.exports = {
             return res.status(200).json(pedido);
         } catch (err) {
             console.log(err);
-            return res.status(400).json('Erro no carregamento das informações');
+            return res.status(400).json('Erro no carregamento das informações do pedido.');
         };
     },
 
@@ -263,6 +269,7 @@ module.exports = {
 
             return res.status(200).json(pedidos);
         } catch (err) {
+            console.log(err);
             return res.status(400).json("Erro no carregamento das informações.");
         };
     },
