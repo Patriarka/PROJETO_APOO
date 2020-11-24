@@ -22,7 +22,7 @@ class Tapete extends Produto {
 class Bandeira extends Produto {
     constructor(dados){
         super(dados);
-        this.temPersonalizacaoDupla = temPersonalizacaoDupla;
+        this.temPersonalizacaoDupla = dados.temPersonalizacaoDupla;
     };
 };
 
