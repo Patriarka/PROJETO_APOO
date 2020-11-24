@@ -102,7 +102,7 @@ module.exports = {
         try {
             const collectionProdutos = await bd.conectarBancoDados('produtos');
 
-            const produto = await collectionProdutos.findOne({ _id: ObjectId(req.params.idProduto) });
+            const produto = await collectionProdutos.findOne({ _id: ObjectId(req.params.id) });
             
             return res.status(200).json(produto);
         } catch (err) {
