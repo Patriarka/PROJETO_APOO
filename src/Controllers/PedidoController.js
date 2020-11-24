@@ -166,7 +166,7 @@ module.exports = {
 
             const collectionProdutos = await bd.conectarBancoDados('produtos');
 
-            for (let i = 0; i < req.body.listaProdutos.length; i++) {
+            for (let i = 0; i < req.body.listaProdutos.length; i++) { // Se temos que pedir para a fábrica
                 let produtoComparar = await encontrarProduto(req.body.listaProdutos[i].idProduto);
 
                 if (req.body.idCliente) {
@@ -182,12 +182,17 @@ module.exports = {
                         listaProdutosFabricar.push(produtoNovo);
                     };
 
-                    if (produtoComparar.qtde > 0) {
+                    if (produtoComparar.qtde > 0) { // Se já temos pronto
                         let quantidadeDecrementada = produtoComparar.qtde - req.body.listaProdutos[i].qtde;
-                        await collectionProdutos.updateOne({ _id: ObjectId(req.body.listaProdutos[i].idProduto) }, { $inc: { qtde: quantidadeDecrementada } });
+                        
+                        if(quantidadeDecrementada <= 0){ 
+                            quantidadeDecrementada = produtoComparar.qtde;
+                        } 
+        
+                        await collectionProdutos.updateOne({ _id: ObjectId(req.body.listaProdutos[i].idProduto) }, { $inc: { qtde: -(quantidadeDecrementada) } });
                     }
 
-                } else {
+                } else { // Sempre incrementamos - caso empresa
                     let produtoNovo = produtoComparar;
 
                     produtoNovo = {
@@ -201,12 +206,13 @@ module.exports = {
                 }
             }
 
+            const collectionPedidos = await bd.conectarBancoDados('pedidos');
+            await collectionPedidos.insertOne(novoPedido);
+
+            if(!listaProdutosFabricar.length > 0) return res.status(400).json("Pedido feito com sucesso!");
+
             if (listaProdutosFabricar)
                 enviarEmailFabrica(listaProdutosFabricar);
-
-            const collectionPedidos = await bd.conectarBancoDados('pedidos');
-
-            await collectionPedidos.insertOne(novoPedido);
 
             return res.status(200).json("Pedido cadastrado com sucesso.");
         } catch(err){
@@ -257,7 +263,7 @@ module.exports = {
 
             await collectionPedidos.deleteOne({ _id: ObjectId(req.params.id) });
 
-            return res.status(400).json('Pedido excluído com sucesso!');
+            return res.status(200).json('Pedido excluído com sucesso!');
         } catch (err) {
             console.log(err);
             return res.status(400).json("Erro ao excluir pedido.")

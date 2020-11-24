@@ -31,9 +31,13 @@ module.exports = {
     async cadastrarProduto(req, res){
         try {
 
-            let tipo = tipoProduto(req.body.tipo) 
+            if(req.body.tipo !== 4 && req.body.produtoEspecificado === 'bandeira'
+            || req.body.tipo === 4 && req.body.produtoEspecificado === 'tapete') 
+                return res.status(404).json('Cadastro inválido!');
 
-            if(tipo === -1) return res.status(404).json('Tipo inválido!');
+            let tipo = tipoProduto(req.body.tipo);
+
+            if(tipo === -1) return res.status(400).json('Tipo inválido!');
 
             const collectionProdutos = await bd.conectarBancoDados('produtos');
         
@@ -54,7 +58,6 @@ module.exports = {
             await collectionProdutos.insertOne(novoProduto);
 
             return res.status(200).json(novoProduto);  
-            
         } catch (err) {
             console.log(err);
             return res.status(400).json('Erro ao cadastrar o produto');
@@ -75,7 +78,7 @@ module.exports = {
 
             await collectionProdutos.deleteOne({ "_id": ObjectId(req.params.id) });
 
-            return res.status(400).json("Produto excluído com sucesso!");
+            return res.status(200).json("Produto excluído com sucesso!");
         } catch (err) {
             console.log(err);
             return res.status(400).json("Erro na exclusão do produto.");
