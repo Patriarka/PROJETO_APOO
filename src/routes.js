@@ -26,6 +26,7 @@ routes.delete('/produtos/:id', ProdutoController.excluirProduto);
 routes.post('/fabricas', FabricaController.cadastrarFabrica); 
 routes.get('/fabricas', FabricaController.listarFabricas);
 routes.get('/fabricas/:id', FabricaController.listarFabrica);
+routes.patch('/fabricas/:id', FabricaController.editarFabrica);
 routes.delete('/fabricas/:id', FabricaController.excluirFabrica);
 
 module.exports = routes;

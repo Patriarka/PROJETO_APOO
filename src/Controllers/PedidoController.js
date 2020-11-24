@@ -133,6 +133,8 @@ module.exports = {
 
         try {
 
+            if(!req.body.idFabrica) res.status(400).json('Não há nenhuma fábrica associada!');
+
             const formaPagamento = encontrarPagamento(req.body.formaPagamento);
             const statusPedido = encontrarStatus(req.body.statusPedido);
 

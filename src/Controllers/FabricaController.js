@@ -1,4 +1,5 @@
 const { Fabrica } = require('../Models/Fabrica');
+const { ObjectId } = require('mongodb');
 const bd = require("../bancoDados.js");
 
 module.exports = {
@@ -20,10 +21,11 @@ module.exports = {
 
     async listarFabricas(req, res){
         try {
+ 
             const collectionFabricas = await bd.conectarBancoDados('fabricas');
-            
+
             const fabricas = await collectionFabricas.find({}).toArray();
-    
+
             return res.status(200).json(fabricas);
         } catch (err) {
             console.log(err);
@@ -31,12 +33,12 @@ module.exports = {
         };
     },
 
-    
     async listarFabrica(req, res){
         try {
+            
             const collectionFabricas = await bd.conectarBancoDados('fabricas');
             
-            const fabricas = await collectionFabricas.findOne({ _id: req.params.idFabrica });
+            const fabricas = await collectionFabricas.findOne({ _id: ObjectId(req.params.id) });
     
             return res.status(200).json(fabricas);
         } catch (err) {
@@ -50,7 +52,12 @@ module.exports = {
 
             const collectionFabricas = await bd.conectarBancoDados('fabricas');
             
-            await collectionFabricas.deleteOne({ _id: req.params.idFabrica });
+            const fabrica = await collectionFabricas.findOne({ _id: ObjectId(req.params.id) });
+
+            if(!fabrica)
+                return res.status(404).json('Fábrica não encontrada!');
+
+            await collectionFabricas.deleteOne({ _id: ObjectId(req.params.id) });
 
             return res.status(200).json('Fábrica excluída com sucesso.');
         } catch(err){
@@ -61,15 +68,17 @@ module.exports = {
 
     async editarFabrica(req, res){
         try{
+
             const novosDados = req.body;
 
             const collectionFabricas = await bd.conectarBancoDados('fabricas');
-            const documentoFabrica = await collectionFabricas.findOne({ _id: req.params.idFabrica });
+
+            const documentoFabrica = await collectionFabricas.findOne({ _id: ObjectId(req.params.id) });
         
             await collectionFabricas.updateOne(documentoFabrica, { $set: novosDados });
 
             return res.status(200).json("Fábrica alterada com sucesso.");
-        } catch(err){
+        } catch(err) {
             console.log(err);
             return res.status(400).json("Erro ao editar a fábrica.");
         }
