@@ -166,7 +166,7 @@ module.exports = {
 
             const collectionProdutos = await bd.conectarBancoDados('produtos');
 
-            for (let i = 0; i < req.body.listaProdutos.length; i++) { // Se temos que pedir para a fábrica
+            for (let i = 0; i < req.body.listaProdutos.length; i++) { 
                 let produtoComparar = await encontrarProduto(req.body.listaProdutos[i].idProduto);
 
                 if (req.body.idCliente) {
@@ -182,7 +182,7 @@ module.exports = {
                         listaProdutosFabricar.push(produtoNovo);
                     };
 
-                    if (produtoComparar.qtde > 0) { // Se já temos pronto
+                    if (produtoComparar.qtde > 0) { 
                         let quantidadeDecrementada = produtoComparar.qtde - req.body.listaProdutos[i].qtde;
                         
                         if(quantidadeDecrementada <= 0){ 
@@ -192,7 +192,7 @@ module.exports = {
                         await collectionProdutos.updateOne({ _id: ObjectId(req.body.listaProdutos[i].idProduto) }, { $inc: { qtde: -(quantidadeDecrementada) } });
                     }
 
-                } else { // Sempre incrementamos - caso empresa
+                } else { 
                     let produtoNovo = produtoComparar;
 
                     produtoNovo = {

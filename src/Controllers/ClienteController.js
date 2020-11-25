@@ -1,6 +1,7 @@
 const { PessoaFisica, PessoaJuridica, OrgaoPublico } = require('../Models/Cliente');
 const { ObjectId } = require('mongodb');
 const bd = require("../bancoDados.js");
+const { cpf, cnpj } = require('cpf-cnpj-validator'); 
 
 module.exports = {
     async cadastrarCliente(req, res) {
@@ -14,8 +15,22 @@ module.exports = {
 
             if (clienteExiste) return res.status(400).json('Cliente já existente!');
 
-            if (req.body.tipoDocumento === 'cpf') novoCliente = new PessoaFisica(req.body);
-            if (req.body.tipoDocumento === 'cnpj') novoCliente = new PessoaJuridica(req.body);
+            if (req.body.tipoDocumento === 'cpf'){
+                let cpfValido = cpf.isValid(req.body.documento);
+
+                if(cpfValido === false)
+                    return res.status(400).json('CPF inválido');
+                
+                novoCliente = new PessoaFisica(req.body);
+            }
+            if (req.body.tipoDocumento === 'cnpj'){
+                let cnpjValido = cnpj.isValid(req.body.documento);
+                
+                if(cnpjValido === false)
+                    return res.status(400).json('CNPJ inválido.');
+    
+                novoCliente = new PessoaJuridica(req.body);
+            }
             if (req.body.tipoDocumento === 'sigla') novoCliente = new OrgaoPublico(req.body);
 
             collectionClientes.insertOne(novoCliente);
